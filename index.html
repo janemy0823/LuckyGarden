@@ -1222,6 +1222,10 @@
         decor = [],
         onDecorMove = () => {},
       }) {
+        const hour = new Date().getHours();
+
+        const isNight = hour >= 18 || hour < 6;
+
         const groundRef = useRef(null);
         const [dragId, setDragId] = useState(null);
         const [overridePos, setOverridePos] = useState({});
@@ -2659,6 +2663,17 @@
             >
               <h3>📖 花园图鉴</h3>
 
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: "#999",
+                  marginTop: "4px",
+                  marginBottom: "8px",
+                }}
+              >
+                🌱 种植过一次就会永久收录到图鉴，可慢慢收集全部48种植物哦～
+              </div>
+
               <div>
                 已收集：
                 {collection.length} / {Object.keys(SPECIES).length}
@@ -2677,6 +2692,33 @@
                   (collection.length / Object.keys(SPECIES).length) * 100
                 )}
                 %
+              </div>
+              <div
+                style={{
+                  marginTop: "6px",
+                  color: "#ff7aa2",
+                  fontWeight: "bold",
+                  fontSize: "12px",
+                  textAlign: "center",
+                }}
+              >
+                {Math.round(
+                  (collection.length / Object.keys(SPECIES).length) * 100
+                ) >= 100
+                  ? "👑 传奇园艺师"
+                  : Math.round(
+                      (collection.length / Object.keys(SPECIES).length) * 100
+                    ) >= 75
+                  ? "🌸 花园大师"
+                  : Math.round(
+                      (collection.length / Object.keys(SPECIES).length) * 100
+                    ) >= 50
+                  ? "🌿 植物爱好者"
+                  : Math.round(
+                      (collection.length / Object.keys(SPECIES).length) * 100
+                    ) >= 25
+                  ? "🌼 小花收藏家"
+                  : "🌱 新手园丁"}
               </div>
 
               <div
@@ -2881,6 +2923,25 @@
           osc.stop(audioCtxRef.current.currentTime + 0.2);
         };
 
+        const cleanGarden = () => {
+          if (state.lastCleanDate === today) {
+            showToast("🍂 今天已经清扫过啦！");
+            return;
+          }
+
+          const reward = Math.floor(Math.random() * 21) + 10;
+
+          setState((prev) => ({
+            ...prev,
+            coins: prev.coins + reward,
+            lastCleanDate: today,
+          }));
+
+          playClickSound();
+
+          showToast(`🧹 清扫完成！获得 ${reward} 金币`);
+        };
+
         const stopSoftMusic = () => {
           if (musicTimerRef.current) {
             clearInterval(musicTimerRef.current);
@@ -2960,6 +3021,11 @@
         }, [state]);
 
         const season = useMemo(() => SEASONS[getSeasonKey()], []);
+
+        const hour = new Date().getHours();
+
+        const isNight = hour >= 18 || hour < 6;
+
         const today = todayStr();
 
         // 每一天第一打卡奖励20金币；每个月第一天额外奖励50金币
@@ -2991,6 +3057,24 @@
           if (!state.profile) return "";
           return getDailyBlessing(state.profile, today);
         }, [state.profile, today]);
+
+        /* 🌸 花仙子随机送礼 */
+        useEffect(() => {
+          if (!state.profile) return;
+
+          const timer = setInterval(() => {
+            const reward = Math.floor(Math.random() * 20) + 10;
+
+            setState((prev) => ({
+              ...prev,
+              coins: prev.coins + reward,
+            }));
+
+            showToast(`🧚 花仙子送来 ${reward} 金币`);
+          }, 30000); // 30秒一次
+
+          return () => clearInterval(timer);
+        }, [state.profile]);
 
         // 每天第一次打开花园页时，献上今日祝福
         useEffect(() => {
@@ -3398,6 +3482,7 @@
                     onClear={clearPlot}
                   />
                   <button
+                    onClick={cleanGarden}
                     style={{
                       width: "100%",
                       padding: "11px",
