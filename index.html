@@ -2890,6 +2890,9 @@
         }); // 默认设定一个学生党的年轻生日测试
         const [showBlessing, setShowBlessing] = useState(false);
         const [musicOn, setMusicOn] = useState(false);
+        const [worryHits, setWorryHits] = useState(0);
+        const [worryDoneDate, setWorryDoneDate] = useState(null);
+
         const audioCtxRef = useRef(null);
         const musicTimerRef = useRef(null);
 
@@ -2921,6 +2924,33 @@
 
           osc.start();
           osc.stop(audioCtxRef.current.currentTime + 0.2);
+        };
+
+        const playWorrySound = () => {
+          if (!musicOn) return;
+
+          if (!audioCtxRef.current) return;
+
+          const osc = audioCtxRef.current.createOscillator();
+
+          const gain = audioCtxRef.current.createGain();
+
+          osc.type = "sawtooth";
+          osc.frequency.value = 120;
+
+          gain.gain.setValueAtTime(0.05, audioCtxRef.current.currentTime);
+
+          gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            audioCtxRef.current.currentTime + 0.15
+          );
+
+          osc.connect(gain);
+          gain.connect(audioCtxRef.current.destination);
+
+          osc.start();
+
+          osc.stop(audioCtxRef.current.currentTime + 0.15);
         };
 
         const cleanGarden = () => {
@@ -3261,6 +3291,29 @@
           setTab("garden");
         };
 
+        const hitWorry = () => {
+          playWorrySound();
+          if (worryDoneDate === today) {
+            showToast("🌸 今天已经驱散过烦恼啦");
+            return;
+          }
+
+          const next = worryHits + 1;
+
+          setWorryHits(next);
+
+          if (next >= 10) {
+            setState((prev) => ({
+              ...prev,
+              coins: prev.coins + 15,
+            }));
+
+            showToast("🎉 烦恼被赶跑啦！+15金币");
+
+            setWorryHits(0);
+          }
+        };
+
         const moveDecorItem = (decorId, x, y) => {
           setState((prev) => ({
             ...prev,
@@ -3506,6 +3559,69 @@
                 <ShopTab coins={state.coins} onBuy={buyDecorItem} />
               )}
 
+              {tab === "worry" && (
+                <div
+                  style={{
+                    background: "#fff",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    textAlign: "center",
+                  }}
+                >
+                  <h2>🪄 驱散烦恼屋</h2>
+
+                  <div
+                    onClick={hitWorry}
+                    style={{
+                      fontSize: "80px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    👿
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {worryDoneDate === today
+                      ? "✅ 今日已完成"
+                      : `已驱散：${worryHits}/10`}
+                  </div>
+
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "10px",
+                      background: "#eee",
+                      borderRadius: "10px",
+                      marginTop: "10px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${worryHits * 10}%`,
+                        height: "100%",
+                        background: "#ff7aa2",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#999",
+                      marginTop: "8px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    点击10次获得金币奖励
+                  </div>
+                </div>
+              )}
+
               {tab === "collection" && (
                 <CollectionTab collection={state.collection || []} />
               )}
@@ -3557,6 +3673,33 @@
                 <span style={{ fontSize: "20px" }}>🛍️</span>
                 <span style={{ fontSize: "11px", marginTop: "2px" }}>商店</span>
               </button>
+
+              <button
+                onClick={() => setTab("worry")}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: tab === "worry" ? "#52b788" : "#999",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>🪄</span>
+
+                <span
+                  style={{
+                    fontSize: "11px",
+                    marginTop: "2px",
+                  }}
+                >
+                  驱烦恼
+                </span>
+              </button>
+
               {/* 📖 图鉴按钮 */}
               <button
                 onClick={() => setTab("collection")}
