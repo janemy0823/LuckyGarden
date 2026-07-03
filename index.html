@@ -2379,7 +2379,7 @@
           id: "clayPot",
           name: "陶土花盆",
           price: 40,
-          icon: "🪺",
+          icon: "🏺",
           isContainer: true,
           desc: "可以在花园里多种一株花",
         },
@@ -2431,147 +2431,21 @@
           isContainer: false,
           desc: "摆件，可在花园里拖动摆放",
         },
-        {
-          id: "fountain",
-          name: "迷你喷泉",
-          price: 85,
-          icon: "⛲",
-          isContainer: false,
-          desc: "每日商店限定摆件，可拖动摆放",
-        },
-        {
-          id: "swing",
-          name: "花园秋千",
-          price: 90,
-          icon: "🎠",
-          isContainer: false,
-          desc: "每日商店限定摆件，可拖动摆放",
-        },
-        {
-          id: "mushroomLamp",
-          name: "蘑菇小灯",
-          price: 75,
-          icon: "🍄",
-          isContainer: false,
-          desc: "每日商店限定摆件，可拖动摆放",
-        },
-        {
-          id: "pond",
-          name: "小池塘",
-          price: 95,
-          icon: "💧",
-          isContainer: false,
-          desc: "每日商店限定摆件，可拖动摆放",
-        },
-        {
-          id: "fairyDoor",
-          name: "花仙子小门",
-          price: 120,
-          icon: "🚪",
-          isContainer: false,
-          desc: "稀有摆件，可拖动摆放",
-        },
-        {
-          id: "crystalStone",
-          name: "水晶石",
-          price: 130,
-          icon: "💎",
-          isContainer: false,
-          desc: "稀有摆件，可拖动摆放",
-        },
       ];
 
-      function seededNumberFromText(text) {
-        let hash = 0;
-        for (let i = 0; i < text.length; i++) {
-          hash = (hash << 5) - hash + text.charCodeAt(i);
-          hash |= 0;
-        }
-        return Math.abs(hash);
-      }
-
-      function getDailyDecorItems(dateKey = todayStr()) {
-        const normalItems = DECOR_ITEMS.filter((item) => item.price < 100);
-        const rareItems = DECOR_ITEMS.filter((item) => item.price >= 100);
-        const seed = seededNumberFromText(`daily-shop-${dateKey}`);
-        const picked = [];
-        const used = new Set();
-
-        for (let i = 0; picked.length < 5 && i < normalItems.length * 3; i++) {
-          const idx = (seed + i * 7 + picked.length * 11) % normalItems.length;
-          const item = normalItems[idx];
-          if (!used.has(item.id)) {
-            picked.push(item);
-            used.add(item.id);
-          }
-        }
-
-        const today = new Date();
-        const weekend = today.getDay() === 0 || today.getDay() === 6;
-        if ((seed % 5 === 0 || weekend) && rareItems.length > 0) {
-          const rare = rareItems[seed % rareItems.length];
-          if (!used.has(rare.id)) picked.push(rare);
-        }
-
-        return picked;
-      }
-
-      function getShopRefreshCountdown() {
-        const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setHours(24, 0, 0, 0);
-        const seconds = Math.max(0, Math.floor((tomorrow - now) / 1000));
-        const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
-        const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
-        const s = String(seconds % 60).padStart(2, "0");
-        return `${h}:${m}:${s}`;
-      }
-
       function ShopTab({ coins, onBuy }) {
-        const [countdown, setCountdown] = useState(getShopRefreshCountdown());
-        const dailyItems = useMemo(() => getDailyDecorItems(todayStr()), []);
-
-        useEffect(() => {
-          const timer = setInterval(
-            () => setCountdown(getShopRefreshCountdown()),
-            1000
-          );
-          return () => clearInterval(timer);
-        }, []);
-
         return (
           <div>
-            <h4 style={{ margin: "0 0 4px 0", color: "#444" }}>
-              每日换新商店 🛍️
-            </h4>
+            <h4 style={{ margin: "0 0 4px 0", color: "#444" }}>装饰摆件商店</h4>
             <p
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: "11px",
-                color: "#aaa",
-                lineHeight: "1.5",
-              }}
+              style={{ margin: "0 0 10px 0", fontSize: "11px", color: "#aaa" }}
             >
-              每天会随机更换不同摆件、花盆和稀有装饰；买回去可以放到花园摆设～
+              花盆/花架买回去能多种一株花；其它摆件买回去可以在花园里自由拖动摆放～
             </p>
-            <div
-              style={{
-                marginBottom: "10px",
-                padding: "9px 10px",
-                background: "#fff7ed",
-                color: "#c56a18",
-                borderRadius: "12px",
-                fontSize: "12px",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              ⏰ 今日商店将在 {countdown} 后刷新
-            </div>
             <div
               style={{ display: "flex", flexDirection: "column", gap: "10px" }}
             >
-              {dailyItems.map((item) => {
+              {DECOR_ITEMS.map((item) => {
                 const canBuy = coins >= item.price;
                 return (
                   <div
@@ -2584,10 +2458,6 @@
                       background: "#fff",
                       borderRadius: "14px",
                       boxShadow: "0 4px 10px rgba(0,0,0,0.02)",
-                      border:
-                        item.price >= 100
-                          ? "1px solid #ffd166"
-                          : "1px solid #f3f3f3",
                     }}
                   >
                     <div
@@ -2606,7 +2476,7 @@
                             color: "#333",
                           }}
                         >
-                          {item.name} {item.price >= 100 ? "✨" : ""}
+                          {item.name}
                         </div>
                         <div style={{ fontSize: "12px", color: "#e67e22" }}>
                           🪙 {item.price}
@@ -2632,6 +2502,55 @@
                     >
                       购买
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      function CollectionTab({ collection = [] }) {
+        return (
+          <div>
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "16px",
+                padding: "16px",
+                marginBottom: "12px",
+              }}
+            >
+              <h3>📖 花园图鉴</h3>
+              <div>
+                已收集：{collection.length} / {Object.keys(SPECIES).length}
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gap: "10px",
+              }}
+            >
+              {Object.entries(SPECIES).map(([id, plant]) => {
+                const unlocked = collection.includes(id);
+                return (
+                  <div
+                    key={id}
+                    style={{
+                      background: "#fff",
+                      borderRadius: "12px",
+                      padding: "10px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: "28px" }}>
+                      {unlocked ? plant.icon : "❓"}
+                    </div>
+                    <div style={{ fontSize: "11px" }}>
+                      {unlocked ? plant.name : "未发现"}
+                    </div>
                   </div>
                 );
               })}
@@ -2746,77 +2665,16 @@
         const [pickerPlot, setPickerPlot] = useState(null);
         const [selectedPlotId, setSelectedPlotId] = useState(null);
         const [regForm, setRegForm] = useState({
-          nickname: "Jane",
-          birthdate: "2010-06-18",
-          gender: "f",
+          nickname: "请输入你的小名",
+          birthdate: "",
+          gender: "",
         }); // 默认设定一个学生党的年轻生日测试
         const [showBlessing, setShowBlessing] = useState(false);
-        const [musicOn, setMusicOn] = useState(false);
-        const audioCtxRef = useRef(null);
-        const musicTimerRef = useRef(null);
 
         const showToast = (msg) => {
           setToast(msg);
           setTimeout(() => setToast(null), 2000);
         };
-
-        const stopSoftMusic = () => {
-          if (musicTimerRef.current) {
-            clearInterval(musicTimerRef.current);
-            musicTimerRef.current = null;
-          }
-          if (audioCtxRef.current) {
-            audioCtxRef.current.close();
-            audioCtxRef.current = null;
-          }
-        };
-
-        useEffect(() => {
-          stopSoftMusic();
-          if (!musicOn) return;
-
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (!AudioContext) {
-            showToast("这个浏览器暂时不支持音乐播放");
-            setMusicOn(false);
-            return;
-          }
-
-          const ctx = new AudioContext();
-          audioCtxRef.current = ctx;
-          const notes = [
-            261.63, 329.63, 392.0, 523.25, 392.0, 329.63, 293.66, 349.23,
-          ];
-          let index = 0;
-
-          const playSoftNote = () => {
-            if (!audioCtxRef.current) return;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = "sine";
-            osc.frequency.value = notes[index % notes.length];
-            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(
-              0.045,
-              ctx.currentTime + 0.08
-            );
-            gain.gain.exponentialRampToValueAtTime(
-              0.0001,
-              ctx.currentTime + 1.25
-            );
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 1.3);
-            index += 1;
-          };
-
-          ctx.resume && ctx.resume();
-          playSoftNote();
-          musicTimerRef.current = setInterval(playSoftNote, 1500);
-
-          return () => stopSoftMusic();
-        }, [musicOn]);
 
         // 自动读取 / 保存游戏进度
         useEffect(() => {
@@ -2847,8 +2705,8 @@
         useEffect(() => {
           if (!state.profile || state.lastCheckInDate === today) return;
           const now = new Date();
-          const monthlyBonus = now.getDate() === 1 ? 50 : 0;
-          const reward = 20 + monthlyBonus;
+          const monthlyBonus = now.getDate() === 1 ? 200 : 0;
+          const reward = 80 + monthlyBonus;
           setState((prev) => ({
             ...prev,
             coins: prev.coins + reward,
@@ -2856,8 +2714,8 @@
           }));
           showToast(
             monthlyBonus
-              ? `🎁 今日首次打卡 +20金币；月初奖励 +50金币！共 +${reward}`
-              : "🎁 今日首次打卡奖励 +20金币！"
+              ? `🎁 今日首次打卡 +80金币；月初奖励 +200金币！共 +${reward}`
+              : "🎁 今日首次打卡奖励 +80金币！"
           );
         }, [state.profile, state.lastCheckInDate, today]);
 
@@ -3213,40 +3071,19 @@
                 </div>
               </div>
               <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                style={{
+                  background: "#fff3e0",
+                  padding: "6px 12px",
+                  borderRadius: "20px",
+                  fontWeight: "bold",
+                  color: "#e67e22",
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
               >
-                <button
-                  onClick={() => setMusicOn((v) => !v)}
-                  title={musicOn ? "关闭柔和音乐" : "播放柔和音乐"}
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    border: "none",
-                    background: musicOn ? "#52b788" : "#edf7f2",
-                    color: musicOn ? "#fff" : "#2d6a4f",
-                    cursor: "pointer",
-                    fontSize: "17px",
-                    boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  {musicOn ? "🔊" : "🎵"}
-                </button>
-                <div
-                  style={{
-                    background: "#fff3e0",
-                    padding: "6px 12px",
-                    borderRadius: "20px",
-                    fontWeight: "bold",
-                    color: "#e67e22",
-                    fontSize: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  🪙 {state.coins}
-                </div>
+                🪙 {state.coins}
               </div>
             </div>
 
@@ -3416,6 +3253,7 @@
         coins: STARTING_COINS,
         plots: [],
         decor: [],
+        collection: [],
         lastCleanDate: null,
         lastBlessingDate: null,
         lastCheckInDate: null,
