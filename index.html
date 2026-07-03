@@ -1,0 +1,3428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>我的四季萌萌花园</title>
+    <script
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+      crossorigin
+    ></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #f0f5f1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+      #root {
+        width: 100%;
+        max-width: 412px;
+        height: 92vh;
+        max-height: 850px;
+        background: #fff;
+        box-shadow: 0 12px 36px rgba(120, 140, 125, 0.15);
+        border-radius: 24px;
+        overflow: hidden;
+        position: relative;
+      }
+      @keyframes floatY {
+        0% {
+          transform: translateY(0px) rotate(0deg);
+          opacity: 0;
+        }
+        10% {
+          opacity: 0.8;
+        }
+        90% {
+          opacity: 0.8;
+        }
+        100% {
+          transform: translateY(110px) rotate(360deg);
+          opacity: 0;
+        }
+      }
+      @keyframes pulseCute {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+      }
+
+      @keyframes gardenWalker {
+        0% {
+          transform: translate(0, 0) scaleX(1);
+        }
+        25% {
+          transform: translate(90px, -12px) scaleX(1);
+        }
+        50% {
+          transform: translate(190px, 18px) scaleX(-1);
+        }
+        75% {
+          transform: translate(70px, 34px) scaleX(-1);
+        }
+        100% {
+          transform: translate(0, 0) scaleX(1);
+        }
+      }
+      @keyframes gardenFlyer {
+        0% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+        20% {
+          transform: translate(80px, -18px) rotate(12deg);
+        }
+        45% {
+          transform: translate(210px, 10px) rotate(-10deg);
+        }
+        70% {
+          transform: translate(120px, 55px) rotate(8deg);
+        }
+        100% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+      }
+      .garden-walker {
+        animation: gardenWalker 12s ease-in-out infinite alternate;
+        pointer-events: none;
+      }
+      .garden-flyer {
+        animation: gardenFlyer 9s ease-in-out infinite;
+        pointer-events: none;
+      }
+      .particle-flower {
+        position: absolute;
+        pointer-events: none;
+        animation: floatY 6s linear infinite;
+      }
+      .cute-pulse {
+        animation: pulseCute 2s ease-in-out infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      // 简易存储模块
+      window.storage = {
+        get: async (key) => {
+          const val = localStorage.getItem(key);
+          return val ? { value: val } : null;
+        },
+        set: async (key, val) => {
+          localStorage.setItem(key, val);
+        },
+      };
+
+      const { useState, useEffect, useMemo, useRef } = React;
+      const STORAGE_KEY = "garden-cute-v6";
+      const GROWTH_PER_STAGE = 4;
+      const MAX_STAGE = 4;
+      const MAX_GROWTH = GROWTH_PER_STAGE * MAX_STAGE;
+      const PLOT_COUNT = 6;
+      const STARTING_COINS = 61;
+      const STAGE_LABELS = [
+        "种子",
+        "破土发芽",
+        "青青抽叶",
+        "萌萌含苞",
+        "快乐盛放 🎉",
+      ];
+
+      const SPECIES = {
+        // 🌸 花卉类
+        rose: {
+          name: "玫瑰",
+          type: "flower",
+          cost: 25,
+          sell: 18,
+          c1: "#ff5e7e",
+          c2: "#ffe3e8",
+          season: "summer",
+          icon: "🌹",
+          produce: "玫瑰花束",
+        },
+        sunflower: {
+          name: "向日葵",
+          type: "flower",
+          cost: 15,
+          sell: 16,
+          c1: "#ffb703",
+          c2: "#ffeaae",
+          season: "summer",
+          icon: "🌻",
+          produce: "向日葵花束",
+        },
+        lavender: {
+          name: "薰衣草",
+          type: "flower",
+          cost: 18,
+          sell: 20,
+          c1: "#9d4edd",
+          c2: "#e0aaff",
+          season: "summer",
+          icon: "🪻",
+          produce: "薰衣草束",
+        },
+        sakura: {
+          name: "樱花",
+          type: "flower",
+          cost: 20,
+          sell: 22,
+          c1: "#ffb3c6",
+          c2: "#fff0f3",
+          season: "spring",
+          icon: "🌸",
+          produce: "樱花花瓣",
+        },
+        tulip: {
+          name: "郁金香",
+          type: "flower",
+          cost: 22,
+          sell: 25,
+          c1: "#ff758f",
+          c2: "#ffd6e0",
+          season: "spring",
+          icon: "🌷",
+          produce: "郁金香花束",
+        },
+        daisy: {
+          name: "雏菊",
+          type: "flower",
+          cost: 12,
+          sell: 15,
+          c1: "#ffd166",
+          c2: "#fff7bc",
+          season: "spring",
+          icon: "🌼",
+          produce: "雏菊花束",
+        },
+        hibiscus: {
+          name: "扶桑花",
+          type: "flower",
+          cost: 24,
+          sell: 28,
+          c1: "#ff006e",
+          c2: "#ffc2d1",
+          season: "summer",
+          icon: "🌺",
+          produce: "扶桑花",
+        },
+        lotus: {
+          name: "莲花",
+          type: "flower",
+          cost: 30,
+          sell: 40,
+          c1: "#f28482",
+          c2: "#fde2e4",
+          season: "summer",
+          icon: "🪷",
+          produce: "莲花",
+        },
+        orchid: {
+          name: "兰花",
+          type: "flower",
+          cost: 35,
+          sell: 45,
+          c1: "#c77dff",
+          c2: "#f3e8ff",
+          season: "spring",
+          icon: "💮",
+          produce: "兰花盆栽",
+        },
+        jasmine: {
+          name: "茉莉花",
+          type: "flower",
+          cost: 28,
+          sell: 35,
+          c1: "#f8f9fa",
+          c2: "#d8f3dc",
+          season: "summer",
+          icon: "🤍",
+          produce: "茉莉花束",
+        },
+        peony: {
+          name: "牡丹",
+          type: "flower",
+          cost: 40,
+          sell: 60,
+          c1: "#e63946",
+          c2: "#ffd6d6",
+          season: "spring",
+          icon: "🌺",
+          produce: "牡丹花束",
+        },
+        camellia: {
+          name: "山茶花",
+          type: "flower",
+          cost: 32,
+          sell: 42,
+          c1: "#d00000",
+          c2: "#ffccd5",
+          season: "winter",
+          icon: "🌺",
+          produce: "山茶花",
+        },
+        hydrangea: {
+          name: "绣球花",
+          type: "flower",
+          cost: 38,
+          sell: 55,
+          c1: "#80bfff",
+          c2: "#e0f2fe",
+          season: "summer",
+          icon: "💠",
+          produce: "绣球花束",
+        },
+        lily: {
+          name: "百合",
+          type: "flower",
+          cost: 34,
+          sell: 48,
+          c1: "#fff1f2",
+          c2: "#fecdd3",
+          season: "spring",
+          icon: "🤍",
+          produce: "百合花束",
+        },
+        marigold: {
+          name: "万寿菊",
+          type: "flower",
+          cost: 26,
+          sell: 34,
+          c1: "#f59e0b",
+          c2: "#fde68a",
+          season: "autumn",
+          icon: "🏵️",
+          produce: "万寿菊",
+        },
+
+        // 🌵 多肉类
+        succulent: {
+          name: "普通多肉",
+          type: "succulent",
+          cost: 10,
+          sell: 12,
+          c1: "#70e000",
+          c2: "#ccff33",
+          season: "all",
+          icon: "🌵",
+          produce: "多肉盆栽",
+        },
+        echeveria: {
+          name: "拟石莲",
+          type: "succulent",
+          cost: 18,
+          sell: 22,
+          c1: "#95d5b2",
+          c2: "#d8f3dc",
+          season: "all",
+          icon: "🪴",
+          produce: "拟石莲盆栽",
+        },
+        haworthia: {
+          name: "十二卷",
+          type: "succulent",
+          cost: 22,
+          sell: 30,
+          c1: "#40916c",
+          c2: "#d8f3dc",
+          season: "all",
+          icon: "🌱",
+          produce: "十二卷盆栽",
+        },
+        jadePlant: {
+          name: "玉树",
+          type: "succulent",
+          cost: 25,
+          sell: 35,
+          c1: "#52b788",
+          c2: "#b7e4c7",
+          season: "all",
+          icon: "🌿",
+          produce: "玉树枝叶",
+        },
+        bearPaw: {
+          name: "熊童子",
+          type: "succulent",
+          cost: 35,
+          sell: 55,
+          c1: "#74c69d",
+          c2: "#d8f3dc",
+          season: "all",
+          icon: "🐾",
+          produce: "熊童子盆栽",
+        },
+        goldenCactus: {
+          name: "金琥",
+          type: "succulent",
+          cost: 40,
+          sell: 65,
+          c1: "#ffb703",
+          c2: "#fbf8cc",
+          season: "all",
+          icon: "🌵",
+          produce: "金琥仙人球",
+        },
+        lithops: {
+          name: "生石花",
+          type: "succulent",
+          cost: 45,
+          sell: 80,
+          c1: "#b08968",
+          c2: "#ede0d4",
+          season: "all",
+          icon: "🪨",
+          produce: "生石花",
+        },
+        crystalSucculent: {
+          name: "玉露",
+          type: "succulent",
+          cost: 55,
+          sell: 100,
+          c1: "#90e0ef",
+          c2: "#caf0f8",
+          season: "all",
+          icon: "💎",
+          produce: "玉露多肉",
+        },
+        pandaSucculent: {
+          name: "熊猫多肉",
+          type: "succulent",
+          cost: 40,
+          sell: 70,
+          c1: "#6c757d",
+          c2: "#f8f9fa",
+          season: "all",
+          icon: "🐼",
+          produce: "熊猫多肉",
+        },
+        moonSucculent: {
+          name: "月光多肉",
+          type: "succulent",
+          cost: 60,
+          sell: 120,
+          c1: "#adb5bd",
+          c2: "#f8f9fa",
+          season: "winter",
+          icon: "🌙",
+          produce: "月光多肉",
+        },
+        rainbowSucculent: {
+          name: "彩虹多肉",
+          type: "succulent",
+          cost: 80,
+          sell: 180,
+          c1: "#ff006e",
+          c2: "#caffbf",
+          season: "all",
+          icon: "🌈",
+          produce: "彩虹多肉",
+        },
+        fairySucculent: {
+          name: "精灵多肉",
+          type: "succulent",
+          cost: 120,
+          sell: 250,
+          c1: "#b5179e",
+          c2: "#ffc8dd",
+          season: "spring",
+          icon: "🧚",
+          produce: "精灵多肉",
+        },
+        iceSucculent: {
+          name: "冰晶多肉",
+          type: "succulent",
+          cost: 150,
+          sell: 320,
+          c1: "#48cae4",
+          c2: "#caf0f8",
+          season: "winter",
+          icon: "❄️",
+          produce: "冰晶多肉",
+        },
+
+        // 🌿 观叶植物类
+        monstera: {
+          name: "龟背竹",
+          type: "green",
+          cost: 25,
+          sell: 35,
+          c1: "#2d6a4f",
+          c2: "#b7e4c7",
+          season: "all",
+          icon: "🌿",
+          produce: "龟背竹",
+        },
+        fern: {
+          name: "蕨类植物",
+          type: "green",
+          cost: 18,
+          sell: 20,
+          c1: "#52b788",
+          c2: "#d8f3dc",
+          season: "all",
+          icon: "🍀",
+          produce: "蕨类盆栽",
+        },
+        moneyTree: {
+          name: "发财树",
+          type: "green",
+          cost: 50,
+          sell: 80,
+          c1: "#386641",
+          c2: "#a7c957",
+          season: "all",
+          icon: "🌳",
+          produce: "发财树",
+        },
+        calathea: {
+          name: "竹芋",
+          type: "green",
+          cost: 22,
+          sell: 30,
+          c1: "#6a994e",
+          c2: "#cfe1b9",
+          season: "all",
+          icon: "🌱",
+          produce: "竹芋叶",
+        },
+        rubberTree: {
+          name: "橡皮树",
+          type: "green",
+          cost: 45,
+          sell: 70,
+          c1: "#31572c",
+          c2: "#90a955",
+          season: "all",
+          icon: "🌳",
+          produce: "橡皮树",
+        },
+        snakePlant: {
+          name: "虎尾兰",
+          type: "green",
+          cost: 38,
+          sell: 55,
+          c1: "#4f772d",
+          c2: "#ecf39e",
+          season: "all",
+          icon: "🌾",
+          produce: "虎尾兰",
+        },
+
+        // 🍓 果树 / 果肉类
+        strawberry: {
+          name: "草莓",
+          type: "fruit",
+          cost: 25,
+          sell: 30,
+          c1: "#ef233c",
+          c2: "#fee2e2",
+          season: "spring",
+          icon: "🍓",
+          produce: "草莓果肉",
+        },
+        apple: {
+          name: "苹果树",
+          type: "fruit",
+          cost: 50,
+          sell: 70,
+          c1: "#d90429",
+          c2: "#ffd6d6",
+          season: "autumn",
+          icon: "🍎",
+          produce: "苹果果肉",
+        },
+        orange: {
+          name: "橙子树",
+          type: "fruit",
+          cost: 55,
+          sell: 78,
+          c1: "#fb8500",
+          c2: "#ffedd8",
+          season: "autumn",
+          icon: "🍊",
+          produce: "橙子果肉",
+        },
+        grape: {
+          name: "葡萄藤",
+          type: "fruit",
+          cost: 45,
+          sell: 62,
+          c1: "#7209b7",
+          c2: "#eadcff",
+          season: "autumn",
+          icon: "🍇",
+          produce: "葡萄果肉",
+        },
+        watermelon: {
+          name: "西瓜",
+          type: "fruit",
+          cost: 60,
+          sell: 88,
+          c1: "#2b9348",
+          c2: "#ffccd5",
+          season: "summer",
+          icon: "🍉",
+          produce: "西瓜果肉",
+        },
+        peach: {
+          name: "蜜桃树",
+          type: "fruit",
+          cost: 65,
+          sell: 95,
+          c1: "#ffb4a2",
+          c2: "#ffe5d9",
+          season: "summer",
+          icon: "🍑",
+          produce: "蜜桃果肉",
+        },
+        cherry: {
+          name: "樱桃树",
+          type: "fruit",
+          cost: 70,
+          sell: 120,
+          c1: "#c1121f",
+          c2: "#ffc2d1",
+          season: "spring",
+          icon: "🍒",
+          produce: "樱桃果肉",
+        },
+
+        // 🌈 稀有 / 传说植物类
+        rainbowRose: {
+          name: "彩虹玫瑰",
+          type: "rare",
+          cost: 150,
+          sell: 280,
+          c1: "#ff006e",
+          c2: "#caffbf",
+          season: "spring",
+          icon: "🌈",
+          produce: "彩虹玫瑰",
+        },
+        goldRose: {
+          name: "黄金玫瑰",
+          type: "rare",
+          cost: 180,
+          sell: 350,
+          c1: "#ffd60a",
+          c2: "#fff3b0",
+          season: "summer",
+          icon: "🌟",
+          produce: "黄金玫瑰",
+        },
+        blueRose: {
+          name: "蓝玫瑰",
+          type: "rare",
+          cost: 100,
+          sell: 180,
+          c1: "#48cae4",
+          c2: "#caf0f8",
+          season: "winter",
+          icon: "🩵",
+          produce: "蓝玫瑰",
+        },
+        nightRose: {
+          name: "夜光玫瑰",
+          type: "rare",
+          cost: 220,
+          sell: 450,
+          c1: "#3a0ca3",
+          c2: "#bde0fe",
+          season: "winter",
+          icon: "🌙",
+          produce: "夜光花瓣",
+        },
+        moonFlower: {
+          name: "月光花",
+          type: "rare",
+          cost: 80,
+          sell: 120,
+          c1: "#adb5bd",
+          c2: "#f8f9fa",
+          season: "winter",
+          icon: "🌙",
+          produce: "月光花瓣",
+        },
+        crystalRose: {
+          name: "水晶玫瑰",
+          type: "rare",
+          cost: 120,
+          sell: 180,
+          c1: "#48cae4",
+          c2: "#caf0f8",
+          season: "winter",
+          icon: "💎",
+          produce: "水晶花瓣",
+        },
+        royalCherry: {
+          name: "皇家樱桃",
+          type: "rareFruit",
+          cost: 200,
+          sell: 500,
+          c1: "#9d0208",
+          c2: "#ffba08",
+          season: "spring",
+          icon: "👑",
+          produce: "皇家樱桃果肉",
+        },
+      };
+
+      const SEASONS = {
+        spring: {
+          name: "春季",
+          emoji: "🌱",
+          bg: "linear-gradient(180deg,#f3fbf1,#e1f4dd)",
+        },
+        summer: {
+          name: "夏季",
+          emoji: "☀️",
+          bg: "linear-gradient(180deg,#fff9eb,#fbecc5)",
+        },
+        autumn: {
+          name: "秋季",
+          emoji: "🍁",
+          bg: "linear-gradient(180deg,#fdf5eb,#f5e0c3)",
+        },
+        winter: {
+          name: "冬季",
+          emoji: "❄️",
+          bg: "linear-gradient(180deg,#f4f7f6,#dae5e2)",
+        },
+      };
+
+      const LUCKY_COLORS = [
+        "燕衣草紫",
+        "奶油橘黄",
+        "软萌樱粉",
+        "薄荷小绿",
+        "晴空浅蓝",
+      ];
+      const LUCKY_NUMBERS = [1, 3, 6, 8, 9, 7];
+      const GENDER_LABEL = { f: "女", m: "男", x: "其他" };
+
+      // 18岁以上：老板心情奖池
+      const BOSS_MOOD_POOL = [
+        {
+          score: 88,
+          status: "心情晴朗 ☀️ 容易画饼",
+          desc: "老板今天可能刚看完了不错的财务报表，思维活跃。提加薪或者申请新预算成功率极高！",
+          bestTime: "10:30 - 11:30 (晨会结束，思路正清晰，适合畅谈未来)",
+          worstTime: "13:30 - 14:15 (刚吃饱容易犯困，最烦冗长的汇报)",
+        },
+        {
+          score: 65,
+          status: "事务繁杂 ☁️ 略显疲惫",
+          desc: "今天各种跨部门琐事比较多。说话记得直奔主题，用数据说话，千万别绕弯子叙旧。",
+          bestTime: "16:00 - 17:00 (一天的麻烦事处理得差不多了，心情开始放空)",
+          worstTime: "09:00 - 10:00 (刚进办公室，邮箱里塞满待办，极其容易暴躁)",
+        },
+        {
+          score: 42,
+          status: "多云转阴 ⛈️ 血压飙升",
+          desc: "可能某个项目进度掉链子了。今天老板眼里揉不得沙子，建议打工人保持低调，做好分内事即可。",
+          bestTime:
+            "15:30 - 16:15 (下午茶歇刚过，血糖回升，是一天中唯一的温柔期)",
+          worstTime:
+            "11:30 - 12:15 (肚子饿了加上早盘业务复盘，此时进去容易沦为炮灰)",
+        },
+        {
+          score: 95,
+          status: "财神附体 🌟 眉开眼笑",
+          desc: "大喜事临门！老板今天看谁都觉得是集团骨干。只要你的提案稍微有点逻辑，几乎都能直接拍板通过！",
+          bestTime:
+            "11:00 - 12:00 (午餐前的黄金期，这时候去谈事指不定还能蹭顿饭)",
+          worstTime:
+            "17:30 - 18:00 (老板急着下班去庆祝或者应酬，没心思听你细说)",
+        },
+      ];
+
+      // 17岁及以下：父母/老师心情奖池
+      const JUNIOR_MOOD_POOL = [
+        {
+          score: 90,
+          status: "春风满面 🌟 极好说话",
+          desc: "长辈今天心情大好，可能刷到了好看的剧、听到别人夸你，或者买到了喜欢的零食。这时候提想要小礼物、零花钱或出去玩的请求，通过率惊人地高！",
+          bestTime: "18:30 - 19:30 (刚吃完热腾腾的晚饭，全家气氛最温馨的时候)",
+          worstTime:
+            "07:00 - 07:45 (早晨赶着出门上学上班，大家手忙脚乱，千万别磨叽)",
+        },
+        {
+          score: 68,
+          status: "平稳淡定 ☁️ 略带唠叨",
+          desc: "今天他们处于正常的操心状态。找他们谈话时，最好先表现出你已经把功课/家务做完了，态度乖巧一点，他们就会非常通情达理。",
+          bestTime: "16:30 - 17:30 (放学刚到家，展示自己做完作业的乖巧模样)",
+          worstTime:
+            "22:00 - 22:30 (到了该睡觉的时间如果还没关灯，分分钟触发碎碎念模式)",
+        },
+        {
+          score: 35,
+          status: "乌云密布 ⚡ 危险雷区",
+          desc: "老师可能在班上强调了纪律，或者父母工作有些劳累。今天千万不要主动试探底线，保持低调，老老实实看书温习或主动帮忙分担家务才是王道！",
+          bestTime:
+            "15:00 - 15:45 (下午学校大课间，或是长辈刚喝完下午茶的短暂放松期)",
+          worstTime:
+            "12:00 - 12:45 (刚拿到刚批改完的测试卷，或者午休被打扰时，极易踩雷)",
+        },
+        {
+          score: 98,
+          status: "喜笑颜开 🎉 宠溺加倍",
+          desc: "天大的好心情！可能你最近表现极棒，或者他们自己遇到了特别开心的喜事。这时候只要你甜甜地撒个娇，大部分合理的愿望都能被满足！",
+          bestTime: "12:00 - 13:00 (周末的丰盛午餐时间，长辈心情最舒畅)",
+          worstTime: "21:00 - 21:30 (正在检查当天的任务清单或错题本，不宜打扰)",
+        },
+      ];
+
+      const FORTUNE_POOL = {
+        fortune: [
+          {
+            score: 94,
+            desc: "财源广进的一天，适合处理重要财务决定，在花园翻土可能会刨出小金币哦！",
+          },
+          {
+            score: 75,
+            desc: "财运平稳上升，理智消费让你今天的钱包鼓鼓囊囊的。",
+          },
+          {
+            score: 52,
+            desc: "财运守恒，今天适合把小钱钱攒起来，不宜乱买小饰品哈。",
+          },
+        ],
+        career: [
+          {
+            name: "事业/学业运",
+            score: 92,
+            desc: "效率拉满！复杂的事情也能迎刃而解，适合推进大计划。",
+          },
+          {
+            name: "事业/学业运",
+            score: 78,
+            desc: "表现中规中矩，脚踏实地完成手头事务就能避开差错。",
+          },
+          {
+            name: "事业/学业运",
+            score: 54,
+            desc: "节奏容易被突发杂事打乱，保持耐心，累了就去给花浇浇水。",
+          },
+        ],
+        study: [
+          {
+            name: "智慧运",
+            score: 95,
+            desc: "头脑思路清晰，灵感如泉涌！今天背书或吸收新知识的速度极快。",
+          },
+          {
+            name: "智慧运",
+            score: 72,
+            desc: "状态稳步前行，适合温习旧的知识点或者整理笔记。",
+          },
+          {
+            name: "智慧运",
+            score: 48,
+            desc: "注意力有点难以集中，容易走神，建议看书前先闭目养神五分钟。",
+          },
+        ],
+        love: [
+          {
+            score: 92,
+            desc: "桃花朵朵开！今天人缘极佳，单身者会收到奇妙的善意，恋爱者甜度超标！",
+          },
+          {
+            score: 72,
+            desc: "交际运不错，适合跟好朋友分享你亲手种出的美丽大花园。",
+          },
+          {
+            score: 34,
+            desc: "今日桃花运平平，不必强求，和心爱的向日葵多呆一会儿更治愈。",
+          },
+        ],
+        health: [
+          {
+            score: 88,
+            desc: "元气满满！身体充满活力，可以尝试稍微多运动一下下哦。",
+          },
+          { score: 75, desc: "状态良好，多喝温水，保持规律的作息时间。" },
+          {
+            score: 54,
+            desc: "感觉情绪压力稍大？容易感到疲惫，适合做些手工或在庭院散步放松。",
+          },
+        ],
+      };
+
+      function todayStr() {
+        const d = new Date();
+        return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+      }
+
+      function getSeasonKey() {
+        const m = new Date().getMonth() + 1;
+        if (m >= 3 && m <= 5) return "spring";
+        if (m >= 6 && m <= 8) return "summer";
+        if (m >= 9 && m <= 11) return "autumn";
+        return "winter";
+      }
+
+      function formatDateCN(d = new Date()) {
+        const weekdays = [
+          "周日",
+          "周一",
+          "周二",
+          "周三",
+          "周四",
+          "周五",
+          "周六",
+        ];
+        return `${d.getMonth() + 1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
+      }
+
+      function calcAge(birthdate) {
+        if (!birthdate) return 0;
+        const birth = new Date(birthdate);
+        const now = new Date();
+        let age = now.getFullYear() - birth.getFullYear();
+        const monthDiff = now.getMonth() - birth.getMonth();
+        if (
+          monthDiff < 0 ||
+          (monthDiff === 0 && now.getDate() < birth.getDate())
+        )
+          age--;
+        return age;
+      }
+
+      function seededHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++)
+          hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        return hash;
+      }
+
+      function pickBySeed(arr, hash, offset) {
+        const idx = Math.abs((hash + offset) % arr.length);
+        return arr[idx];
+      }
+
+      // 每日心情（与运势页共用同一套种子，保持一致）
+      function computeDailyMood(profile, todayKey) {
+        const seedStr = `${profile.birthdate}-${
+          profile.gender || "x"
+        }-${todayKey}`;
+        const hash = seededHash(seedStr);
+        const isJunior = calcAge(profile.birthdate) <= 17;
+        const pool = isJunior ? JUNIOR_MOOD_POOL : BOSS_MOOD_POOL;
+        const mood = pickBySeed(pool, hash, 88);
+        return { ...mood, isJunior, hash };
+      }
+
+      // 心情分数换算今日花园访客（小动物 + 小昆虫）
+      const CRITTER_TIERS = [
+        { min: 85, animal: "🐦", insect: "🦋", label: "元气满满" },
+        { min: 55, animal: "🐿️", insect: "🐝", label: "悠闲惬意" },
+        { min: 0, animal: "🐢", insect: "🐌", label: "慢悠悠" },
+      ];
+      function getCritterForMood(score) {
+        return (
+          CRITTER_TIERS.find((t) => score >= t.min) ||
+          CRITTER_TIERS[CRITTER_TIERS.length - 1]
+        );
+      }
+
+      // 每日打卡祝福 / 心灵鸡汤
+      const BLESSING_POOL = [
+        "新的一天，愿你像向日葵一样，永远朝着阳光生长。",
+        "慢慢来比较快，今天先把手头的一件小事做好就很棒了。",
+        "你已经做得很好了，别忘了也给自己浇浇水、松松土。",
+        "今天遇到的小麻烦，都是明天故事里的小插曲，别怕。",
+        "允许自己偶尔慢一点，花也有含苞待放的时候。",
+        "先把心情照顾好，其他的事情自然会慢慢开花结果。",
+        "今天也要记得喝水、按时吃饭，好好照顾自己这株小苗。",
+        "你走的每一步都算数，哪怕今天只前进了一点点。",
+        "累的时候就歇一歇，花园会一直在这里等你回来。",
+        "今天也是值得被好好对待的一天，加油鸭 🐣",
+      ];
+      function getDailyBlessing(profile, todayKey) {
+        const seedStr = `bless-${profile.birthdate}-${
+          profile.gender || "x"
+        }-${todayKey}`;
+        const hash = seededHash(seedStr);
+        return pickBySeed(BLESSING_POOL, hash, 3);
+      }
+
+      function BlessingModal({ text, nickname, onClose }) {
+        return (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.45)",
+              display: "flex",
+              zIndex: 120,
+              backdropFilter: "blur(2px)",
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg,#fffaf0,#fff2df)",
+                margin: "auto",
+                width: "80%",
+                borderRadius: "20px",
+                padding: "26px 20px",
+                textAlign: "center",
+                boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
+              }}
+            >
+              <div className="cute-pulse" style={{ fontSize: "34px" }}>
+                🌼
+              </div>
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#b76e79",
+                  margin: "8px 0 4px",
+                }}
+              >
+                今日祝福 · 送给{nickname}
+              </div>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#5a4a3a",
+                  lineHeight: "1.7",
+                  margin: "10px 0 18px",
+                }}
+              >
+                {text}
+              </p>
+              <button
+                onClick={onClose}
+                style={{
+                  width: "100%",
+                  padding: "11px",
+                  background: "#e6a96b",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                }}
+              >
+                收下这份鼓励 💌
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      function CutePlantSVG({ speciesId, stage, size = 52 }) {
+        if (!speciesId || stage === 0) {
+          return (
+            <svg width={size} height={size} viewBox="0 0 64 64">
+              <ellipse cx="32" cy="52" rx="18" ry="6" fill="#a07156" />
+              <path d="M32,50 Q26,42 22,43 Q26,48 32,50 Z" fill="#9ef01a" />
+              <path d="M32,50 Q38,40 44,39 Q38,47 32,50 Z" fill="#74c69d" />
+              <circle cx="32" cy="42" r="2" fill="#fff" opacity="0.7" />
+            </svg>
+          );
+        }
+
+        const progress = stage / MAX_STAGE;
+
+        if (speciesId === "rose") {
+          return (
+            <svg
+              width={size}
+              height={size}
+              viewBox="0 0 64 64"
+              style={{
+                transform: `scale(${0.6 + progress * 0.5})`,
+                transformOrigin: "bottom center",
+              }}
+            >
+              <path
+                d="M32,60 L32,32"
+                stroke="#40916c"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <path d="M32,45 Q20,40 24,35 Z" fill="#2d6a4f" />
+              <path d="M32,40 Q44,36 40,30 Z" fill="#2d6a4f" />
+              {stage < 3 ? (
+                <path d="M32,32 C26,22 38,16 32,32 Z" fill="#ff4d6d" />
+              ) : (
+                <g className="cute-pulse">
+                  <circle cx="32" cy="24" r="14" fill="#ff5e7e" />
+                  <circle cx="32" cy="24" r="9" fill="#ff85a1" />
+                  <path
+                    d="M32,15 C28,20 36,24 32,30"
+                    stroke="#fff"
+                    strokeWidth="1.5"
+                    fill="none"
+                    opacity="0.6"
+                  />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        if (speciesId === "sunflower") {
+          return (
+            <svg
+              width={size}
+              height={size}
+              viewBox="0 0 64 64"
+              style={{
+                transform: `scale(${0.6 + progress * 0.5})`,
+                transformOrigin: "bottom center",
+              }}
+            >
+              <path d="M32,60 L32,28" stroke="#52b788" strokeWidth="4" />
+              <path d="M32,48 Q44,45 42,40 Z" fill="#1b4332" />
+              {stage < 3 ? (
+                <circle cx="32" cy="24" r="8" fill="#d8f3dc" />
+              ) : (
+                <g>
+                  <circle
+                    cx="32"
+                    cy="22"
+                    r="14"
+                    fill="#ffb703"
+                    stroke="#f1a900"
+                    strokeWidth="2"
+                    strokeDasharray="6,3"
+                  />
+                  <circle cx="32" cy="22" r="9" fill="#774936" />
+                  <circle cx="29" cy="20" r="1" fill="#fff" />
+                  <circle cx="35" cy="20" r="1" fill="#fff" />
+                  <circle
+                    cx="27"
+                    cy="22"
+                    r="1.5"
+                    fill="#ff4d6d"
+                    opacity="0.6"
+                  />
+                  <circle
+                    cx="37"
+                    cy="22"
+                    r="1.5"
+                    fill="#ff4d6d"
+                    opacity="0.6"
+                  />
+                  <path
+                    d="M30,24 Q32,26 34,24"
+                    stroke="#fff"
+                    strokeWidth="1"
+                    fill="none"
+                  />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        if (speciesId === "lavender") {
+          return (
+            <svg
+              width={size}
+              height={size}
+              viewBox="0 0 64 64"
+              style={{
+                transform: `scale(${0.6 + progress * 0.5})`,
+                transformOrigin: "bottom center",
+              }}
+            >
+              <path d="M32,60 L32,20" stroke="#74c69d" strokeWidth="3" />
+              <circle cx="32" cy="30" r="6" fill="#b5179e" opacity="0.8" />
+              <circle cx="32" cy="22" r="7" fill="#7209b7" />
+              <circle cx="32" cy="14" r="5" fill="#4cc9f0" opacity="0.9" />
+              <circle cx="27" cy="24" r="5" fill="#a2d2ff" opacity="0.7" />
+              <circle cx="37" cy="20" r="5" fill="#b5179e" opacity="0.7" />
+            </svg>
+          );
+        }
+
+        if (speciesId === "sakura") {
+          return (
+            <svg
+              width={size}
+              height={size}
+              viewBox="0 0 64 64"
+              style={{
+                transform: `scale(${0.5 + progress * 0.6})`,
+                transformOrigin: "bottom center",
+              }}
+            >
+              <path
+                d="M32,60 Q34,40 32,26"
+                stroke="#6f4e37"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              {stage < 3 ? (
+                <circle cx="32" cy="24" r="6" fill="#ffccd5" />
+              ) : (
+                <g>
+                  <circle cx="32" cy="16" r="8" fill="#ffb3c6" />
+                  <circle cx="24" cy="24" r="8" fill="#ffccd5" />
+                  <circle cx="40" cy="24" r="8" fill="#ffccd5" />
+                  <circle cx="28" cy="32" r="7" fill="#fff0f3" />
+                  <circle cx="36" cy="32" r="7" fill="#fff0f3" />
+                  <circle cx="32" cy="24" r="4" fill="#ff4d6d" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        return (
+          <svg
+            width={size}
+            height={size}
+            viewBox="0 0 64 64"
+            style={{
+              transform: `scale(${0.7 + progress * 0.4})`,
+              transformOrigin: "bottom center",
+            }}
+          >
+            <g transform="translate(0, 10)">
+              <circle cx="32" cy="34" r="12" fill="#52b788" />
+              <circle cx="24" cy="32" r="9" fill="#74c69d" />
+              <circle cx="40" cy="32" r="9" fill="#74c69d" />
+              <circle cx="32" cy="24" r="10" fill="#95d5b2" />
+            </g>
+          </svg>
+        );
+      }
+
+      function GardenScene({
+        plots,
+        season,
+        onSelect,
+        selectedId,
+        critter,
+        decor = [],
+        onDecorMove = () => {},
+      }) {
+        const groundRef = useRef(null);
+        const [dragId, setDragId] = useState(null);
+        const [overridePos, setOverridePos] = useState({});
+
+        const clientToPct = (clientX, clientY) => {
+          const rect = groundRef.current.getBoundingClientRect();
+          const x = Math.max(
+            2,
+            Math.min(94, ((clientX - rect.left) / rect.width) * 100)
+          );
+          const y = Math.max(
+            2,
+            Math.min(88, ((clientY - rect.top) / rect.height) * 100)
+          );
+          return { x, y };
+        };
+        const handlePointerDown = (e, item) => {
+          e.currentTarget.setPointerCapture &&
+            e.currentTarget.setPointerCapture(e.pointerId);
+          setDragId(item.id);
+        };
+        const handlePointerMove = (e) => {
+          if (!dragId || !groundRef.current) return;
+          setOverridePos((prev) => ({
+            ...prev,
+            [dragId]: clientToPct(e.clientX, e.clientY),
+          }));
+        };
+        const finishDrag = () => {
+          if (dragId && overridePos[dragId]) {
+            onDecorMove(dragId, overridePos[dragId].x, overridePos[dragId].y);
+          }
+          setDragId(null);
+        };
+
+        return (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "18px",
+              overflow: "hidden",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.04)",
+              position: "relative",
+            }}
+          >
+            <div
+              ref={groundRef}
+              onPointerMove={handlePointerMove}
+              onPointerUp={finishDrag}
+              onPointerLeave={finishDrag}
+              style={{
+                padding: "28px 16px 16px 16px",
+                background: season.bg,
+                minHeight: "150px",
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "12px",
+                position: "relative",
+                touchAction: "none",
+              }}
+            >
+              <span
+                className="particle-flower"
+                style={{ left: "15%", top: "10px", fontSize: "12px" }}
+              >
+                🌸
+              </span>
+              <span
+                className="particle-flower"
+                style={{
+                  left: "55%",
+                  top: "30px",
+                  fontSize: "10px",
+                  animationDelay: "2s",
+                }}
+              >
+                ✨
+              </span>
+              <span
+                className="particle-flower"
+                style={{
+                  left: "80%",
+                  top: "5px",
+                  fontSize: "14px",
+                  animationDelay: "4s",
+                }}
+              >
+                🌸
+              </span>
+
+              {plots.map((p) => {
+                const isSelected = selectedId === p.id;
+                const sp = p.speciesId ? SPECIES[p.speciesId] : null;
+                const stage = Math.min(
+                  MAX_STAGE,
+                  Math.floor(p.growth / GROWTH_PER_STAGE)
+                );
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => onSelect(p.id)}
+                    style={{
+                      height: "82px",
+                      background: isSelected
+                        ? "linear-gradient(135deg,#ffeaa7,#fdcbc4)"
+                        : "linear-gradient(180deg, #e3af9a, #c78368)",
+                      border: isSelected
+                        ? "3px solid #ff7675"
+                        : "3px solid #a3634a",
+                      borderRadius: "14px",
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                      alignItems: "center",
+                      paddingBottom: "6px",
+                      position: "relative",
+                      boxShadow: isSelected
+                        ? "0 4px 12px rgba(255,118,117,0.3)"
+                        : "none",
+                      zIndex: 1,
+                    }}
+                  >
+                    {p.containerType && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "3px",
+                          left: "5px",
+                          fontSize: "10px",
+                        }}
+                      >
+                        {p.containerType === "vintageStand" ? "🪴" : "🏺"}
+                      </span>
+                    )}
+                    <div style={{ position: "absolute", bottom: "24px" }}>
+                      <CutePlantSVG speciesId={p.speciesId} stage={stage} />
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        background: "rgba(0,0,0,0.3)",
+                        color: "#fff",
+                        padding: "2px 6px",
+                        borderRadius: "8px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {sp ? sp.name : `+ 空地`}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {decor.map((d) => {
+                const pos = overridePos[d.id] || { x: d.x, y: d.y };
+                return (
+                  <span
+                    key={d.id}
+                    onPointerDown={(e) => handlePointerDown(e, d)}
+                    title={`${d.name} · 拖动我换个位置`}
+                    style={{
+                      position: "absolute",
+                      left: `${pos.x}%`,
+                      top: `${pos.y}%`,
+                      fontSize: "22px",
+                      cursor: "grab",
+                      userSelect: "none",
+                      touchAction: "none",
+                      zIndex: dragId === d.id ? 20 : 5,
+                      filter:
+                        dragId === d.id
+                          ? "drop-shadow(0 4px 6px rgba(0,0,0,0.25))"
+                          : "none",
+                    }}
+                  >
+                    {d.icon}
+                  </span>
+                );
+              })}
+
+              {critter && (
+                <React.Fragment>
+                  <span
+                    className="garden-walker"
+                    style={{
+                      position: "absolute",
+                      bottom: "14px",
+                      left: "6px",
+                      fontSize: "22px",
+                      zIndex: 6,
+                    }}
+                    title={`今日访客 · ${critter.label} · 会在花园里走来走去`}
+                  >
+                    {critter.animal}
+                  </span>
+                  <span
+                    className="garden-flyer"
+                    style={{
+                      position: "absolute",
+                      top: "22px",
+                      left: "8px",
+                      fontSize: "18px",
+                      zIndex: 6,
+                    }}
+                    title={`今日访客 · ${critter.label} · 会在花园里飞来飞去`}
+                  >
+                    {critter.insect}
+                  </span>
+                </React.Fragment>
+              )}
+            </div>
+
+            <div
+              style={{
+                padding: "10px",
+                fontSize: "12px",
+                textAlign: "center",
+                color: "#6e8164",
+                background: "#f5f9f4",
+                fontWeight: "500",
+              }}
+            >
+              {season.emoji} 当前属于：{season.name}环境 · 📅 {formatDateCN()}{" "}
+              {critter ? `· 今日访客${critter.label}` : ""}
+            </div>
+          </div>
+        );
+      }
+
+      function PlotDetail({ plot, today, onWater, onEmptyTap, onClear }) {
+        if (!plot)
+          return (
+            <div
+              style={{
+                textAlign: "center",
+                color: "#9ca896",
+                fontSize: "13px",
+                padding: "40px 16px",
+              }}
+            >
+              🌿 戳上方任意一个可爱花盆，开始照料它吧！
+            </div>
+          );
+        if (!plot.speciesId) {
+          return (
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "16px",
+                padding: "20px",
+                marginTop: "14px",
+                textAlign: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 14px 0",
+                  color: "#777",
+                  fontSize: "14px",
+                }}
+              >
+                这块土地还空着，快来播撒希望的种子吧~
+              </p>
+              <button
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  background: "#74c69d",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+                onClick={() => onEmptyTap(plot.id)}
+              >
+                🌱 选购种子并播种
+              </button>
+            </div>
+          );
+        }
+        const sp = SPECIES[plot.speciesId];
+        const stage = Math.min(
+          MAX_STAGE,
+          Math.floor(plot.growth / GROWTH_PER_STAGE)
+        );
+        const watered = plot.lastWatered === today;
+        const isMature = plot.growth >= MAX_GROWTH;
+
+        return (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "16px",
+              padding: "18px",
+              marginTop: "14px",
+              textAlign: "center",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+              border: "1px solid #edf4ee",
+            }}
+          >
+            <div style={{ fontSize: "28px", marginBottom: "4px" }}>
+              {sp.icon}
+            </div>
+            <h4
+              style={{
+                margin: "0 0 6px 0",
+                color: "#2d6a4f",
+                fontSize: "16px",
+              }}
+            >
+              {sp.name}{" "}
+              <span style={{ color: "#52b788", fontSize: "13px" }}>
+                [{STAGE_LABELS[stage]}]
+              </span>
+            </h4>
+
+            <div
+              style={{
+                width: "100%",
+                background: "#eee",
+                height: "8px",
+                borderRadius: "4px",
+                overflow: "hidden",
+                margin: "10px 0",
+              }}
+            >
+              <div
+                style={{
+                  width: `${(plot.growth / MAX_GROWTH) * 100}%`,
+                  background: "#52b788",
+                  height: "100%",
+                  transition: "width 0.3s",
+                }}
+              ></div>
+            </div>
+            <p
+              style={{ fontSize: "12px", color: "#888", margin: "0 0 14px 0" }}
+            >
+              成长点数: {plot.growth} / {MAX_GROWTH}
+            </p>
+
+            {isMature ? (
+              <button
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  background: "#ff6b6b",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+                onClick={() => onClear(plot.id)}
+              >
+                ✂️ 快乐采收 (获得大量金币分红)
+              </button>
+            ) : (
+              <button
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  background: watered ? "#d3e7de" : "#52b788",
+                  color: watered ? "#888" : "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontWeight: "bold",
+                  cursor: watered ? "default" : "pointer",
+                }}
+                disabled={watered}
+                onClick={() => onWater(plot.id)}
+              >
+                {watered
+                  ? "✓ 今天已经喂过饱饱的水喽"
+                  : "💧 浇水培育 (+2成长 & 奖励金币)"}
+              </button>
+            )}
+          </div>
+        );
+      }
+
+      function SeedShopModal({ onPick, onClose, currentCoins }) {
+        return (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.45)",
+              display: "flex",
+              zIndex: 100,
+              backdropFilter: "blur(2px)",
+            }}
+          >
+            <div
+              style={{
+                background: "#fff",
+                margin: "auto",
+                width: "82%",
+                borderRadius: "20px",
+                padding: "20px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+              }}
+            >
+              <h3
+                style={{ marginTop: 0, color: "#2d6a4f", textAlign: "center" }}
+              >
+                🎒 萌动种子铺
+              </h3>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  maxHeight: "280px",
+                  overflowY: "auto",
+                  paddingRight: "4px",
+                }}
+              >
+                {Object.entries(SPECIES).map(([id, sp]) => {
+                  const canBuy = currentCoins >= sp.cost;
+                  return (
+                    <div
+                      key={id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px",
+                        background: "#f9fbf9",
+                        border: "1px solid #e1ebe1",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <span style={{ fontSize: "22px" }}>{sp.icon}</span>
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              color: "#333",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {sp.name}
+                          </div>
+                          <div style={{ fontSize: "11px", color: "#999" }}>
+                            适宜季节: {SEASONS[sp.season]?.name || "四季常青"}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        disabled={!canBuy}
+                        onClick={() => onPick(id)}
+                        style={{
+                          padding: "6px 12px",
+                          background: canBuy ? "#52b788" : "#ccc",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "6px",
+                          fontWeight: "bold",
+                          cursor: canBuy ? "pointer" : "default",
+                          fontSize: "12px",
+                        }}
+                      >
+                        🪙 {sp.cost} 购入
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  marginTop: "14px",
+                  width: "100%",
+                  padding: "10px",
+                  background: "#eee",
+                  border: "none",
+                  color: "#666",
+                  borderRadius: "8px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+              >
+                返回花园
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      function FortuneTab({ profile }) {
+        const todayKey = todayStr();
+
+        const currentAge = useMemo(() => {
+          if (!profile.birthdate) return 0;
+          const birth = new Date(profile.birthdate);
+          const now = new Date();
+          let age = now.getFullYear() - birth.getFullYear();
+          const monthDiff = now.getMonth() - birth.getMonth();
+          if (
+            monthDiff < 0 ||
+            (monthDiff === 0 && now.getDate() < birth.getDate())
+          ) {
+            age--;
+          }
+          return age;
+        }, [profile.birthdate]);
+
+        const luckData = useMemo(() => {
+          const seedStr = `${profile.birthdate}-${
+            profile.gender || "x"
+          }-${todayKey}`;
+          let hash = 0;
+          for (let i = 0; i < seedStr.length; i++) {
+            hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
+          }
+          const getRandItem = (arr, offset) => {
+            const idx = Math.abs((hash + offset) % arr.length);
+            return arr[idx];
+          };
+
+          const fItem = getRandItem(FORTUNE_POOL.fortune, 11);
+          const cItem = getRandItem(FORTUNE_POOL.career, 22);
+          const sItem = getRandItem(FORTUNE_POOL.study, 77);
+          const lItem = getRandItem(FORTUNE_POOL.love, 33);
+          const hItem = getRandItem(FORTUNE_POOL.health, 44);
+
+          // 核心逻辑判断：17岁或以下使用父母老师心情池，18岁及以上使用老板池
+          const isJunior = currentAge <= 17;
+          const targetMoodPool = isJunior ? JUNIOR_MOOD_POOL : BOSS_MOOD_POOL;
+          const currentMood = getRandItem(targetMoodPool, 88);
+
+          const totalScore = Math.round(
+            (fItem.score +
+              cItem.score +
+              sItem.score +
+              lItem.score +
+              hItem.score) /
+              5
+          );
+
+          const list = [
+            { id: "fortune", name: "财富运势 🪙", score: fItem.score },
+            {
+              id: "career",
+              name: isJunior ? "学业/成长运 💼" : "事业发展运 💼",
+              score: cItem.score,
+            },
+            { id: "study", name: "智慧气运 🎓", score: sItem.score },
+            { id: "love", name: "萌动桃花运 💖", score: lItem.score },
+            { id: "health", name: "健康活力运 🍀", score: hItem.score },
+          ];
+
+          list.sort((a, b) => b.score - a.score);
+
+          let bestName = "";
+          if (isJunior && list[0].id === "study") {
+            bestName = list[1].name;
+          } else {
+            bestName = list[0].name;
+          }
+
+          // 洗牌算法生成 TOTO 6个不重复号码
+          const numberPool = Array.from({ length: 49 }, (_, i) => i + 1);
+          const selectedTotoNums = [];
+          let currentHash = hash;
+
+          for (let i = 0; i < 6; i++) {
+            currentHash = (currentHash * 31 + i) % 2147483647;
+            const pickIndex = Math.abs(currentHash) % numberPool.length;
+            selectedTotoNums.push(numberPool[pickIndex]);
+            numberPool.splice(pickIndex, 1);
+          }
+          selectedTotoNums.sort((a, b) => a - b);
+          const totoStrResult = selectedTotoNums.join(", ") + " toto";
+
+          return {
+            totalScore,
+            bestName,
+            totoStrResult,
+            currentMood,
+            isJunior,
+            f: fItem,
+            c: cItem,
+            s: sItem,
+            l: lItem,
+            h: hItem,
+            color: getRandItem(LUCKY_COLORS, 55),
+            num: getRandItem(LUCKY_NUMBERS, 66),
+          };
+        }, [profile.birthdate, todayKey, currentAge]);
+
+        const renderStars = (score) => {
+          const count = Math.round(score / 20);
+          return "⭐".repeat(count) + "☆".repeat(5 - count);
+        };
+
+        return (
+          <div style={{ padding: "2px" }}>
+            <div style={{ textAlign: "center", margin: "4px 0 12px 0" }}>
+              <span style={{ color: "#888", fontSize: "12px" }}>
+                今日星轨运势速递 · {todayKey}
+              </span>
+              <h2 style={{ margin: "4px 0", color: "#b76e79" }}>
+                🌟 最佳运势：{luckData.bestName} 🌟
+              </h2>
+            </div>
+
+            <div
+              style={{
+                background: "linear-gradient(135deg,#fffbf0,#fff5db)",
+                borderRadius: "16px",
+                padding: "14px",
+                textAlign: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                marginBottom: "14px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#8a7355",
+                  fontWeight: "bold",
+                }}
+              >
+                今日气运综合总指数
+              </div>
+              <div
+                style={{
+                  fontSize: "36px",
+                  fontWeight: "900",
+                  color: "#d97706",
+                  margin: "4px 0",
+                }}
+              >
+                {luckData.totalScore}
+                <span style={{ fontSize: "16px", fontWeight: "normal" }}>
+                  {" "}
+                  分
+                </span>
+              </div>
+              <div style={{ fontSize: "12px", color: "#b09a7a" }}>
+                园主命格：{profile.nickname} ({currentAge}岁 ·{" "}
+                {GENDER_LABEL[profile.gender] || "保密"}) 的 {profile.zodiacW}
+              </div>
+            </div>
+
+            {/* 动态图谱卡片：自动适配 大老板 或 父母/老师 */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f6f8fb, #edf1f7)",
+                border: "1px solid #dcdfe6",
+                borderRadius: "16px",
+                padding: "14px",
+                marginBottom: "14px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                  color: "#2c3e50",
+                }}
+              >
+                <span>
+                  📊 今日{luckData.isJunior ? "家庭与校园" : "职场"}风向标 ·{" "}
+                  {luckData.isJunior ? "父母/老师" : "大老板"}心情图谱
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  margin: "10px 0 6px 0",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    color: "#34495e",
+                  }}
+                >
+                  🔥 心情指数:{" "}
+                  <span
+                    style={{
+                      color:
+                        luckData.currentMood.score > 70 ? "#27ae60" : "#e74c3c",
+                    }}
+                  >
+                    {luckData.currentMood.score}%
+                  </span>
+                </span>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    background:
+                      luckData.currentMood.score > 70 ? "#e8f5e9" : "#ffebee",
+                    color:
+                      luckData.currentMood.score > 70 ? "#2e7d32" : "#c62828",
+                    padding: "2px 8px",
+                    borderRadius: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {luckData.currentMood.status}
+                </span>
+              </div>
+
+              <p
+                style={{
+                  margin: "0 0 10px 0",
+                  fontSize: "12px",
+                  color: "#666",
+                  lineHeight: "1.4",
+                }}
+              >
+                {luckData.currentMood.desc}
+              </p>
+
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: "10px",
+                  padding: "8px 10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  fontSize: "12px",
+                }}
+              >
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <span style={{ color: "#27ae60", fontWeight: "bold" }}>
+                    🟢 最佳沟通时机:
+                  </span>
+                  <span style={{ color: "#333", flex: 1 }}>
+                    {luckData.currentMood.bestTime}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "4px",
+                    borderTop: "1px dashed #eee",
+                    paddingTop: "6px",
+                  }}
+                >
+                  <span style={{ color: "#e74c3c", fontWeight: "bold" }}>
+                    🔴 高危避坑时段:
+                  </span>
+                  <span style={{ color: "#333", flex: 1 }}>
+                    {luckData.currentMood.worstTime}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "16px",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+              }}
+            >
+              {/* 财运 */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "13px",
+                    fontWeight: "bold",
+                    color: "#444",
+                  }}
+                >
+                  <span>🪙 财富金币运</span>
+                  <span style={{ color: "#d97706" }}>
+                    {luckData.f.score} 点
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    background: "#f0f0f0",
+                    height: "6px",
+                    borderRadius: "3px",
+                    margin: "4px 0",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${luckData.f.score}%`,
+                      background: "#f1c40f",
+                      height: "100%",
+                      borderRadius: "3px",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#eb9834",
+                    margin: "2px 0",
+                  }}
+                >
+                  {renderStars(luckData.f.score)}
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    color: "#666",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {luckData.f.desc}
+                </p>
+              </div>
+
+              {/* 事业/成长运 */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "13px",
+                    fontWeight: "bold",
+                    color: "#444",
+                  }}
+                >
+                  <span>
+                    💼 {luckData.isJunior ? "成长学业运" : "事业发展运"}
+                  </span>
+                  <span style={{ color: "#2980b9" }}>
+                    {luckData.c.score} 点
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    background: "#f0f0f0",
+                    height: "6px",
+                    borderRadius: "3px",
+                    margin: "4px 0",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${luckData.c.score}%`,
+                      background: "#3498db",
+                      height: "100%",
+                      borderRadius: "3px",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#3498db",
+                    margin: "2px 0",
+                  }}
+                >
+                  {renderStars(luckData.c.score)}
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    color: "#666",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {luckData.c.desc}
+                </p>
+              </div>
+
+              {/* 学业运 */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "13px",
+                    fontWeight: "bold",
+                    color: "#444",
+                  }}
+                >
+                  <span>🎓 智慧开悟运</span>
+                  <span style={{ color: "#9b59b6" }}>
+                    {luckData.s.score} 点
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    background: "#f0f0f0",
+                    height: "6px",
+                    borderRadius: "3px",
+                    margin: "4px 0",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${luckData.s.score}%`,
+                      background: "#9b59b6",
+                      height: "100%",
+                      borderRadius: "3px",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#9b59b6",
+                    margin: "2px 0",
+                  }}
+                >
+                  {renderStars(luckData.s.score)}
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    color: "#666",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {luckData.s.desc}
+                </p>
+              </div>
+
+              {/* 桃花运 */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "13px",
+                    fontWeight: "bold",
+                    color: "#444",
+                  }}
+                >
+                  <span>💖 萌动人缘运</span>
+                  <span style={{ color: "#e84393" }}>
+                    {luckData.l.score} 点
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    background: "#f0f0f0",
+                    height: "6px",
+                    borderRadius: "3px",
+                    margin: "4px 0",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${luckData.l.score}%`,
+                      background: "#e84393",
+                      height: "100%",
+                      borderRadius: "3px",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#e84393",
+                    margin: "2px 0",
+                  }}
+                >
+                  {renderStars(luckData.l.score)}
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    color: "#666",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {luckData.l.desc}
+                </p>
+              </div>
+
+              {/* 健康运 */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "13px",
+                    fontWeight: "bold",
+                    color: "#444",
+                  }}
+                >
+                  <span>🍀 活力健康运</span>
+                  <span style={{ color: "#27ae60" }}>
+                    {luckData.h.score} 点
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    background: "#f0f0f0",
+                    height: "6px",
+                    borderRadius: "3px",
+                    margin: "4px 0",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${luckData.h.score}%`,
+                      background: "#2ecc71",
+                      height: "100%",
+                      borderRadius: "3px",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#2ecc71",
+                    margin: "2px 0",
+                  }}
+                >
+                  {renderStars(luckData.h.score)}
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    color: "#666",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {luckData.h.desc}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+              <div
+                style={{
+                  flex: 1,
+                  background: "#f4f9f4",
+                  borderRadius: "12px",
+                  padding: "10px",
+                  textAlign: "center",
+                  fontSize: "11px",
+                }}
+              >
+                <span style={{ color: "#666" }}>🎨 今日幸运色</span>
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    color: "#27ae60",
+                    marginTop: "2px",
+                    fontSize: "12px",
+                  }}
+                >
+                  {luckData.color}
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  background: "#fbf5f6",
+                  borderRadius: "12px",
+                  padding: "10px",
+                  textAlign: "center",
+                  fontSize: "11px",
+                }}
+              >
+                <span style={{ color: "#666" }}>🔢 幸运微数字</span>
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    color: "#e84393",
+                    marginTop: "2px",
+                    fontSize: "12px",
+                  }}
+                >
+                  {luckData.num}
+                </div>
+              </div>
+            </div>
+
+            {/* 今日 TOTO 锦鲤号码 */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #eef2f3, #e4e7eb)",
+                borderRadius: "14px",
+                padding: "12px",
+                marginTop: "12px",
+                textAlign: "center",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.02)",
+                border: "1px solid #dcdfe6",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "#5a5e66",
+                  fontWeight: "bold",
+                }}
+              >
+                🔮 {luckData.isJunior ? "学业增运" : "庭院专属"} · 今日 TOTO
+                锦鲤号码
+              </span>
+              <div
+                style={{
+                  fontWeight: "800",
+                  color: "#2c3e50",
+                  marginTop: "4px",
+                  fontSize: "15px",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {luckData.totoStrResult}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const DECOR_ITEMS = [
+        {
+          id: "clayPot",
+          name: "陶土花盆",
+          price: 40,
+          icon: "🪺",
+          isContainer: true,
+          desc: "可以在花园里多种一株花",
+        },
+        {
+          id: "vintageStand",
+          name: "复古花架",
+          price: 60,
+          icon: "🪴",
+          isContainer: true,
+          desc: "买后会加入花园，可把花或植物放在花架上养",
+        },
+        {
+          id: "path",
+          name: "石子小径",
+          price: 25,
+          icon: "🪨",
+          isContainer: false,
+          desc: "摆件，可在花园里拖动摆放",
+        },
+        {
+          id: "chime",
+          name: "风铃",
+          price: 45,
+          icon: "🎐",
+          isContainer: false,
+          desc: "摆件，可在花园里拖动摆放",
+        },
+        {
+          id: "bench",
+          name: "小木凳",
+          price: 55,
+          icon: "🪑",
+          isContainer: false,
+          desc: "摆件，可在花园里拖动摆放",
+        },
+        {
+          id: "lantern",
+          name: "小灯笼",
+          price: 50,
+          icon: "🏮",
+          isContainer: false,
+          desc: "摆件，可在花园里拖动摆放",
+        },
+        {
+          id: "birdhouse",
+          name: "鸟屋",
+          price: 65,
+          icon: "🐦",
+          isContainer: false,
+          desc: "摆件，可在花园里拖动摆放",
+        },
+        {
+          id: "fountain",
+          name: "迷你喷泉",
+          price: 85,
+          icon: "⛲",
+          isContainer: false,
+          desc: "每日商店限定摆件，可拖动摆放",
+        },
+        {
+          id: "swing",
+          name: "花园秋千",
+          price: 90,
+          icon: "🎠",
+          isContainer: false,
+          desc: "每日商店限定摆件，可拖动摆放",
+        },
+        {
+          id: "mushroomLamp",
+          name: "蘑菇小灯",
+          price: 75,
+          icon: "🍄",
+          isContainer: false,
+          desc: "每日商店限定摆件，可拖动摆放",
+        },
+        {
+          id: "pond",
+          name: "小池塘",
+          price: 95,
+          icon: "💧",
+          isContainer: false,
+          desc: "每日商店限定摆件，可拖动摆放",
+        },
+        {
+          id: "fairyDoor",
+          name: "花仙子小门",
+          price: 120,
+          icon: "🚪",
+          isContainer: false,
+          desc: "稀有摆件，可拖动摆放",
+        },
+        {
+          id: "crystalStone",
+          name: "水晶石",
+          price: 130,
+          icon: "💎",
+          isContainer: false,
+          desc: "稀有摆件，可拖动摆放",
+        },
+      ];
+
+      function seededNumberFromText(text) {
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+          hash = (hash << 5) - hash + text.charCodeAt(i);
+          hash |= 0;
+        }
+        return Math.abs(hash);
+      }
+
+      function getDailyDecorItems(dateKey = todayStr()) {
+        const normalItems = DECOR_ITEMS.filter((item) => item.price < 100);
+        const rareItems = DECOR_ITEMS.filter((item) => item.price >= 100);
+        const seed = seededNumberFromText(`daily-shop-${dateKey}`);
+        const picked = [];
+        const used = new Set();
+
+        for (let i = 0; picked.length < 5 && i < normalItems.length * 3; i++) {
+          const idx = (seed + i * 7 + picked.length * 11) % normalItems.length;
+          const item = normalItems[idx];
+          if (!used.has(item.id)) {
+            picked.push(item);
+            used.add(item.id);
+          }
+        }
+
+        const today = new Date();
+        const weekend = today.getDay() === 0 || today.getDay() === 6;
+        if ((seed % 5 === 0 || weekend) && rareItems.length > 0) {
+          const rare = rareItems[seed % rareItems.length];
+          if (!used.has(rare.id)) picked.push(rare);
+        }
+
+        return picked;
+      }
+
+      function getShopRefreshCountdown() {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setHours(24, 0, 0, 0);
+        const seconds = Math.max(0, Math.floor((tomorrow - now) / 1000));
+        const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
+        const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+        const s = String(seconds % 60).padStart(2, "0");
+        return `${h}:${m}:${s}`;
+      }
+
+      function ShopTab({ coins, onBuy }) {
+        const [countdown, setCountdown] = useState(getShopRefreshCountdown());
+        const dailyItems = useMemo(() => getDailyDecorItems(todayStr()), []);
+
+        useEffect(() => {
+          const timer = setInterval(
+            () => setCountdown(getShopRefreshCountdown()),
+            1000
+          );
+          return () => clearInterval(timer);
+        }, []);
+
+        return (
+          <div>
+            <h4 style={{ margin: "0 0 4px 0", color: "#444" }}>
+              每日换新商店 🛍️
+            </h4>
+            <p
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "11px",
+                color: "#aaa",
+                lineHeight: "1.5",
+              }}
+            >
+              每天会随机更换不同摆件、花盆和稀有装饰；买回去可以放到花园摆设～
+            </p>
+            <div
+              style={{
+                marginBottom: "10px",
+                padding: "9px 10px",
+                background: "#fff7ed",
+                color: "#c56a18",
+                borderRadius: "12px",
+                fontSize: "12px",
+                fontWeight: "bold",
+                textAlign: "center",
+              }}
+            >
+              ⏰ 今日商店将在 {countdown} 后刷新
+            </div>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {dailyItems.map((item) => {
+                const canBuy = coins >= item.price;
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px",
+                      background: "#fff",
+                      borderRadius: "14px",
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.02)",
+                      border:
+                        item.price >= 100
+                          ? "1px solid #ffd166"
+                          : "1px solid #f3f3f3",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                      }}
+                    >
+                      <span style={{ fontSize: "24px" }}>{item.icon}</span>
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: "bold",
+                            fontSize: "14px",
+                            color: "#333",
+                          }}
+                        >
+                          {item.name} {item.price >= 100 ? "✨" : ""}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#e67e22" }}>
+                          🪙 {item.price}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#aaa" }}>
+                          {item.desc}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      disabled={!canBuy}
+                      onClick={() => onBuy(item)}
+                      style={{
+                        padding: "6px 14px",
+                        background: canBuy ? "#7fa99b" : "#ccc",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontWeight: "bold",
+                        cursor: canBuy ? "pointer" : "default",
+                        fontSize: "12px",
+                      }}
+                    >
+                      购买
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      function MeTab({ profile, coins }) {
+        const age = useMemo(() => {
+          if (!profile.birthdate) return 0;
+          const birth = new Date(profile.birthdate);
+          const now = new Date();
+          let a = now.getFullYear() - birth.getFullYear();
+          const monthDiff = now.getMonth() - birth.getMonth();
+          if (
+            monthDiff < 0 ||
+            (monthDiff === 0 && now.getDate() < birth.getDate())
+          )
+            a--;
+          return a;
+        }, [profile.birthdate]);
+
+        return (
+          <div>
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "18px",
+                padding: "24px 16px",
+                textAlign: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+              }}
+            >
+              <div style={{ fontSize: "36px" }}>🧑‍🌾</div>
+              <div
+                style={{
+                  fontSize: "17px",
+                  fontWeight: "bold",
+                  color: "#2d6a4f",
+                  marginTop: "4px",
+                }}
+              >
+                {profile.nickname}
+              </div>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginTop: "6px" }}
+              >
+                {profile.birthdate} · {age}岁 ·{" "}
+                {GENDER_LABEL[profile.gender] || "保密"}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  justifyContent: "center",
+                  marginTop: "12px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "12px",
+                    background: "#edf7f2",
+                    color: "#2d6a4f",
+                    padding: "4px 10px",
+                    borderRadius: "20px",
+                  }}
+                >
+                  ♈ {profile.zodiacW}
+                </span>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    background: "#fff3e0",
+                    color: "#e67e22",
+                    padding: "4px 10px",
+                    borderRadius: "20px",
+                  }}
+                >
+                  🐾 属{profile.zodiacC}
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#2d6a4f",
+                  marginTop: "16px",
+                  fontWeight: "bold",
+                }}
+              >
+                🪙 当前金币：{coins}
+              </div>
+            </div>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "16px",
+                color: "#bbb",
+                fontSize: "11px",
+              }}
+            >
+              生日和性别仅用于生成每日运势，保存在本机浏览器中
+            </div>
+          </div>
+        );
+      }
+
+      function GardenApp() {
+        const [state, setState] = useState(defaultState);
+        const [tab, setTab] = useState("garden");
+        const [toast, setToast] = useState(null);
+        const [pickerPlot, setPickerPlot] = useState(null);
+        const [selectedPlotId, setSelectedPlotId] = useState(null);
+        const [regForm, setRegForm] = useState({
+          nickname: "Jane",
+          birthdate: "2010-06-18",
+          gender: "f",
+        }); // 默认设定一个学生党的年轻生日测试
+        const [showBlessing, setShowBlessing] = useState(false);
+        const [musicOn, setMusicOn] = useState(false);
+        const audioCtxRef = useRef(null);
+        const musicTimerRef = useRef(null);
+
+        const showToast = (msg) => {
+          setToast(msg);
+          setTimeout(() => setToast(null), 2000);
+        };
+
+        const stopSoftMusic = () => {
+          if (musicTimerRef.current) {
+            clearInterval(musicTimerRef.current);
+            musicTimerRef.current = null;
+          }
+          if (audioCtxRef.current) {
+            audioCtxRef.current.close();
+            audioCtxRef.current = null;
+          }
+        };
+
+        useEffect(() => {
+          stopSoftMusic();
+          if (!musicOn) return;
+
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) {
+            showToast("这个浏览器暂时不支持音乐播放");
+            setMusicOn(false);
+            return;
+          }
+
+          const ctx = new AudioContext();
+          audioCtxRef.current = ctx;
+          const notes = [
+            261.63, 329.63, 392.0, 523.25, 392.0, 329.63, 293.66, 349.23,
+          ];
+          let index = 0;
+
+          const playSoftNote = () => {
+            if (!audioCtxRef.current) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = notes[index % notes.length];
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(
+              0.045,
+              ctx.currentTime + 0.08
+            );
+            gain.gain.exponentialRampToValueAtTime(
+              0.0001,
+              ctx.currentTime + 1.25
+            );
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 1.3);
+            index += 1;
+          };
+
+          ctx.resume && ctx.resume();
+          playSoftNote();
+          musicTimerRef.current = setInterval(playSoftNote, 1500);
+
+          return () => stopSoftMusic();
+        }, [musicOn]);
+
+        // 自动读取 / 保存游戏进度
+        useEffect(() => {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            try {
+              const loaded = JSON.parse(saved);
+              setState({
+                ...defaultState,
+                ...loaded,
+                decor: loaded.decor || [],
+                plots: loaded.plots || [],
+              });
+            } catch (e) {
+              console.warn("读取存档失败，使用默认存档", e);
+            }
+          }
+        }, []);
+
+        useEffect(() => {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }, [state]);
+
+        const season = useMemo(() => SEASONS[getSeasonKey()], []);
+        const today = todayStr();
+
+        // 每一天第一打卡奖励20金币；每个月第一天额外奖励50金币
+        useEffect(() => {
+          if (!state.profile || state.lastCheckInDate === today) return;
+          const now = new Date();
+          const monthlyBonus = now.getDate() === 1 ? 50 : 0;
+          const reward = 20 + monthlyBonus;
+          setState((prev) => ({
+            ...prev,
+            coins: prev.coins + reward,
+            lastCheckInDate: today,
+          }));
+          showToast(
+            monthlyBonus
+              ? `🎁 今日首次打卡 +20金币；月初奖励 +50金币！共 +${reward}`
+              : "🎁 今日首次打卡奖励 +20金币！"
+          );
+        }, [state.profile, state.lastCheckInDate, today]);
+
+        const dailyMood = useMemo(() => {
+          if (!state.profile) return null;
+          return computeDailyMood(state.profile, today);
+        }, [state.profile, today]);
+
+        const critter = dailyMood ? getCritterForMood(dailyMood.score) : null;
+
+        const blessingText = useMemo(() => {
+          if (!state.profile) return "";
+          return getDailyBlessing(state.profile, today);
+        }, [state.profile, today]);
+
+        // 每天第一次打开花园页时，献上今日祝福
+        useEffect(() => {
+          if (
+            state.profile &&
+            tab === "garden" &&
+            state.lastBlessingDate !== today
+          ) {
+            setShowBlessing(true);
+          }
+        }, [state.profile, tab, state.lastBlessingDate, today]);
+
+        const closeBlessing = () => {
+          setShowBlessing(false);
+          setState((prev) => ({ ...prev, lastBlessingDate: today }));
+        };
+
+        const submitRegistration = () => {
+          if (!regForm.birthdate) {
+            showToast("请填入正确的诞生日期噢~");
+            return;
+          }
+          const d = new Date(regForm.birthdate);
+          const table = [
+            [1, 19, "摩羯座"],
+            [2, 18, "水瓶座"],
+            [3, 20, "双鱼座"],
+            [4, 19, "白羊座"],
+            [5, 20, "金牛座"],
+            [6, 21, "双子座"],
+            [7, 22, "巨蟹座"],
+            [8, 22, "狮子座"],
+            [9, 22, "处女座"],
+            [10, 23, "天秤座"],
+            [11, 22, "天蝎座"],
+            [12, 21, "射手座"],
+          ];
+          let zodiacW = "摩羯座";
+          const m = d.getMonth() + 1,
+            day = d.getDate();
+          for (const [mm, dd, name] of table) {
+            if (m < mm || (m === mm && day <= dd)) {
+              zodiacW = name;
+              break;
+            }
+          }
+          const zodiacs = [
+            "猴",
+            "鸡",
+            "狗",
+            "猪",
+            "鼠",
+            "牛",
+            "虎",
+            "兔",
+            "龙",
+            "蛇",
+            "马",
+            "羊",
+          ];
+          const zodiacC = zodiacs[((d.getFullYear() % 12) + 12) % 12];
+
+          setState({
+            profile: {
+              nickname: regForm.nickname || "尊贵的小园丁",
+              birthdate: regForm.birthdate,
+              gender: regForm.gender,
+              zodiacW,
+              zodiacC,
+            },
+            coins: STARTING_COINS,
+            plots: Array.from({ length: PLOT_COUNT }, (_, i) => ({
+              id: i,
+              speciesId: null,
+              growth: 0,
+              lastWatered: null,
+            })),
+            decor: [],
+            lastCleanDate: null,
+            lastBlessingDate: null,
+            lastCheckInDate: null,
+          });
+        };
+
+        const waterPlot = (plotId) => {
+          setState((prev) => {
+            const nextPlots = prev.plots.map((p) =>
+              p.id === plotId
+                ? {
+                    ...p,
+                    growth: Math.min(MAX_GROWTH, p.growth + 2),
+                    lastWatered: today,
+                  }
+                : p
+            );
+            return { ...prev, plots: nextPlots, coins: prev.coins + 3 };
+          });
+          showToast("💧 哗啦啦~ 浇水成功！小花舒适度UP，金币 +3");
+        };
+
+        const plantSpecies = (plotId, speciesId) => {
+          const cost = SPECIES[speciesId].cost;
+          if (state.coins < cost) {
+            showToast("小钱包空空，金币不够买这款种子呢QAQ");
+            return;
+          }
+          setState((prev) => {
+            const nextPlots = prev.plots.map((p) =>
+              p.id === plotId
+                ? { ...p, speciesId, growth: 0, lastWatered: null }
+                : p
+            );
+            return { ...prev, plots: nextPlots, coins: prev.coins - cost };
+          });
+          setPickerPlot(null);
+          showToast(
+            `🌱 成功在${plotId + 1}号地种下了可爱的 ${SPECIES[speciesId].name}`
+          );
+        };
+
+        const clearPlot = (plotId) => {
+          setState((prev) => {
+            const nextPlots = prev.plots.map((p) =>
+              p.id === plotId
+                ? { id: plotId, speciesId: null, growth: 0, lastWatered: null }
+                : p
+            );
+            return { ...prev, plots: nextPlots, coins: prev.coins + 18 };
+          });
+          showToast("✂️ 采收完毕！打包成精美花束卖掉，金币大丰收 +18！");
+        };
+
+        const buyDecorItem = (item) => {
+          if (state.coins < item.price) {
+            showToast("金币不够，先多照料花园赚金币吧～");
+            return;
+          }
+
+          setState((prev) => {
+            if (item.isContainer) {
+              const containerPlot = {
+                id: Date.now(),
+                speciesId: null,
+                growth: 0,
+                lastWatered: null,
+                containerType: item.id,
+              };
+              return {
+                ...prev,
+                coins: prev.coins - item.price,
+                plots: [...prev.plots, containerPlot],
+              };
+            }
+
+            const newDecor = {
+              id: `${item.id}-${Date.now()}`,
+              itemId: item.id,
+              name: item.name,
+              icon: item.icon,
+              x: 15 + Math.random() * 65,
+              y: 18 + Math.random() * 55,
+            };
+            return {
+              ...prev,
+              coins: prev.coins - item.price,
+              decor: [...(prev.decor || []), newDecor],
+            };
+          });
+
+          showToast(
+            item.isContainer
+              ? `${item.icon} ${item.name} 已放进花园，可以种花/植物啦！`
+              : `${item.icon} ${item.name} 已放进花园，拖动它来摆设吧！`
+          );
+          setTab("garden");
+        };
+
+        const moveDecorItem = (decorId, x, y) => {
+          setState((prev) => ({
+            ...prev,
+            decor: (prev.decor || []).map((d) =>
+              d.id === decorId ? { ...d, x, y } : d
+            ),
+          }));
+        };
+
+        const activePlot = state.plots.find((p) => p.id === selectedPlotId);
+
+        if (!state.profile) {
+          return (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                background: "#f4f9f4",
+              }}
+            >
+              <div
+                style={{
+                  padding: "26px",
+                  margin: "auto",
+                  width: "80%",
+                  background: "#fff",
+                  borderRadius: "20px",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
+                }}
+              >
+                <h3
+                  style={{
+                    textAlign: "center",
+                    color: "#2d6a4f",
+                    marginTop: 0,
+                  }}
+                >
+                  创建专属暖心花园 🌸
+                </h3>
+                <input
+                  style={{
+                    width: "90%",
+                    padding: "11px",
+                    marginBottom: "12px",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                  }}
+                  placeholder="设定你的园主昵称"
+                  value={regForm.nickname}
+                  onChange={(e) =>
+                    setRegForm({ ...regForm, nickname: e.target.value })
+                  }
+                />
+                <input
+                  type="date"
+                  style={{
+                    width: "90%",
+                    padding: "11px",
+                    marginBottom: "12px",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                  }}
+                  value={regForm.birthdate}
+                  onChange={(e) =>
+                    setRegForm({ ...regForm, birthdate: e.target.value })
+                  }
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    width: "90%",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {[
+                    ["f", "女"],
+                    ["m", "男"],
+                    ["x", "其他"],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setRegForm({ ...regForm, gender: key })}
+                      style={{
+                        flex: 1,
+                        padding: "9px 0",
+                        borderRadius: "8px",
+                        border:
+                          regForm.gender === key
+                            ? "1px solid #52b788"
+                            : "1px solid #ddd",
+                        background: regForm.gender === key ? "#52b788" : "#fff",
+                        color: regForm.gender === key ? "#fff" : "#666",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "#52b788",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                  }}
+                  onClick={submitRegistration}
+                >
+                  开启梦幻庄园 ✨
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              background: "#fafdfa",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "14px 18px",
+                background: "#fff",
+                borderBottom: "1px solid #f0f5f0",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    color: "#2d6a4f",
+                    fontSize: "15px",
+                  }}
+                >
+                  {season.emoji} {state.profile.nickname} 的治愈小院
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#e67e22",
+                    marginTop: "2px",
+                  }}
+                >
+                  🔥 连续照料 1 天 · 📅 {formatDateCN()}
+                </div>
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <button
+                  onClick={() => setMusicOn((v) => !v)}
+                  title={musicOn ? "关闭柔和音乐" : "播放柔和音乐"}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    border: "none",
+                    background: musicOn ? "#52b788" : "#edf7f2",
+                    color: musicOn ? "#fff" : "#2d6a4f",
+                    cursor: "pointer",
+                    fontSize: "17px",
+                    boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  {musicOn ? "🔊" : "🎵"}
+                </button>
+                <div
+                  style={{
+                    background: "#fff3e0",
+                    padding: "6px 12px",
+                    borderRadius: "20px",
+                    fontWeight: "bold",
+                    color: "#e67e22",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  🪙 {state.coins}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, padding: "14px", overflowY: "auto" }}>
+              {tab === "garden" && (
+                <div>
+                  <GardenScene
+                    plots={state.plots}
+                    season={season}
+                    onSelect={setSelectedPlotId}
+                    selectedId={selectedPlotId}
+                    critter={critter}
+                    decor={state.decor || []}
+                    onDecorMove={moveDecorItem}
+                  />
+                  <PlotDetail
+                    plot={activePlot}
+                    today={today}
+                    onWater={waterPlot}
+                    onEmptyTap={(id) => setPickerPlot(id)}
+                    onClear={clearPlot}
+                  />
+                  <button
+                    style={{
+                      width: "100%",
+                      padding: "11px",
+                      background: "#edf7f2",
+                      border: "none",
+                      color: "#2d6a4f",
+                      borderRadius: "10px",
+                      marginTop: "12px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                    }}
+                  >
+                    🍂 一键清扫庭院飘落枯叶
+                  </button>
+                </div>
+              )}
+
+              {tab === "fortune" && <FortuneTab profile={state.profile} />}
+              {tab === "shop" && (
+                <ShopTab coins={state.coins} onBuy={buyDecorItem} />
+              )}
+              {tab === "me" && (
+                <MeTab profile={state.profile} coins={state.coins} />
+              )}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                height: "62px",
+                borderTop: "1px solid #eee",
+                background: "#fff",
+              }}
+            >
+              <button
+                onClick={() => setTab("garden")}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: tab === "garden" ? "#52b788" : "#999",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>🌷</span>
+                <span style={{ fontSize: "11px", marginTop: "2px" }}>花园</span>
+              </button>
+              <button
+                onClick={() => setTab("shop")}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: tab === "shop" ? "#52b788" : "#999",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>🛍️</span>
+                <span style={{ fontSize: "11px", marginTop: "2px" }}>商店</span>
+              </button>
+              <button
+                onClick={() => setTab("fortune")}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: tab === "fortune" ? "#52b788" : "#999",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>🎁</span>
+                <span style={{ fontSize: "11px", marginTop: "2px" }}>运势</span>
+              </button>
+              <button
+                onClick={() => setTab("me")}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: tab === "me" ? "#52b788" : "#999",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>🧑‍🌾</span>
+                <span style={{ fontSize: "11px", marginTop: "2px" }}>我的</span>
+              </button>
+            </div>
+
+            {pickerPlot !== null && (
+              <SeedShopModal
+                onPick={(sid) => plantSpecies(pickerPlot, sid)}
+                onClose={() => setPickerPlot(null)}
+                currentCoins={state.coins}
+              />
+            )}
+            {showBlessing && (
+              <BlessingModal
+                text={blessingText}
+                nickname={state.profile.nickname}
+                onClose={closeBlessing}
+              />
+            )}
+            {toast && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "80px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "rgba(0,0,0,0.75)",
+                  color: "#fff",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  fontSize: "12px",
+                  zIndex: 999,
+                }}
+              >
+                {toast}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      const defaultState = {
+        profile: null,
+        coins: STARTING_COINS,
+        plots: [],
+        decor: [],
+        lastCleanDate: null,
+        lastBlessingDate: null,
+        lastCheckInDate: null,
+      };
+      const container = document.getElementById("root");
+      const root = ReactDOM.createRoot(container);
+      root.render(<GardenApp />);
+    </script>
+  </body>
+</html>
