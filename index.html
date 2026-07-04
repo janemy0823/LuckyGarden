@@ -2879,6 +2879,7 @@
 
       function GardenApp() {
         const [state, setState] = useState(defaultState);
+        const isLoadedRef = useRef(false);
         const [tab, setTab] = useState("garden");
         const [toast, setToast] = useState(null);
         const [pickerPlot, setPickerPlot] = useState(null);
@@ -3044,9 +3045,13 @@
               console.warn("读取存档失败，使用默认存档", e);
             }
           }
+          // 标记读档已完成，避免下面的保存副作用在读档完成前
+          // 用初始空状态把已有存档覆盖掉
+          isLoadedRef.current = true;
         }, []);
 
         useEffect(() => {
+          if (!isLoadedRef.current) return;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         }, [state]);
 
